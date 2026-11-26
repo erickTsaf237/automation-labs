@@ -5,6 +5,8 @@ node_modules/
 *.tfstate
 *.tfstate.*
 .usine/
-
+# code de session:     ICSSA-AUTOMATION-2026-11
+# Email:     ericktsafack2017@gmail.com
+# Prenm      Erick
 # Terraform : verrou des providers, propre à la plateforme du poste (le provider vient du miroir local).
 .terraform.lock.hcl
