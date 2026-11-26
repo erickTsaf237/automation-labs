@@ -5,6 +5,7 @@ name: CI_Reservation
 on:
     push:
         branches: ["**"]
+        tags: ["v*"]
     pull_request:
 
 permissions:
@@ -58,7 +59,20 @@ jobs:
 
             - name: Nom de l'image en minuscule
               id: nom
-              run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+              run: |
+                  image="ghcr.io/$GITHUB_REPOSITORY,,"
+                  if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+                      version="${GITHUB_REF_NAME#v}"
+                      tags="$image:$GITHUB_SHA,$image:$version"
+                  else
+                      version="dev-${GITHUB_SHA::7}"
+                      tags="$image:$GITHUB_SHA"
+                  fi
+                  {
+                      echo "image=$image"
+                      echo "version=$version"
+                      echo "tags=$tags"
+                  } >> "$GITHUB_OUTPUT"
 
             - name: Connexion ghcr.io
               uses: docker/login-action@v4
@@ -75,4 +89,4 @@ jobs:
                   tags: ${{ steps.nom.outputs.image }}:${{ github.sha }}
                   build-args: |
                       APP_COMMIT=${{github.sha}}
-                      APP_VERSION=dev
+                      APP_VERSION=${{steps.nom.outputs.version}}
