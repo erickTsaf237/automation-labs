@@ -60,7 +60,7 @@ jobs:
             - name: Nom de l'image en minuscule
               id: nom
               run: |
-                  image="ghcr.io/$GITHUB_REPOSITORY,,"
+                  image="ghcr.io/${GITHUB_REPOSITORY,,}"
                   if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
                       version="${GITHUB_REF_NAME#v}"
                       tags="$image:$GITHUB_SHA,$image:$version"
