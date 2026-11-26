@@ -4,20 +4,104 @@
 # 1. Récupérer le code (deploy.sh : git rev-parse, git archive)
 #    Sur le poste, une fois pour tous les serveurs : delegate_to: localhost, run_once: true, become: false.
 #    Fabriquez l'archive build_archive (src, package.json, node_modules d'exécution) ; creates: la rend rejouable.
+- name: Fabriquezl'archive du commit sur le poste
+  ansible.builtin.shell: |
+    set -euo pipefail
+    work="$(mktemp -d)"
+    git -C "{{ repo_root }}" archive "{{app_commit}}" app | tar -x -C "$work"
+    cd "$work/app"
+    npm ci --omit=dev --no-audit --no-fund
+    tar -czf "{{ build_archive }}" src package.json node_modules
+    rm -rf "$work"
+  args:
+    executable: /bin/bash
+    creates: "{{ build_archive }}"
+  delegate_to: localhost
+  run_once: true
+  become: false
 
 # 2. Installer (deploy.sh : npm ci ; ici, le pipeline teste déjà)
 #    Les paquets système dont le service a besoin (ansible.builtin.apt) ; l'utilisateur applicatif
 #    (ansible.builtin.user) ; APP_USER dans /etc/default/reservations (ansible.builtin.lineinfile).
 
+- name: Paquet systeme necessaire
+  ansible.builtin.apt:
+    name: [tar, gzip]
+    state: present
+
+- name: Utilisateur applicatif
+  ansible.builtin.user:
+    name: reservations
+    system: true
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Le service tourne avec cet Utilisateur
+  ansible.builtin.lineinfile:
+    path: /etc/default/reservations
+    regex: "^APP_USER="
+    line: APP_USER=reservations
+    create: true
+    mode: "0644"
+  notify: Redemarrer reservations
+
 # 3. Livrer (deploy.sh : tar … | ssh … tar -x -C /opt/reservations)
 #    L'archive sur le serveur (ansible.builtin.copy), puis extraite dans /opt/reservations (ansible.builtin.unarchive).
+- name: Envoyer l'archive sur le serveur
+  ansible.builtin.copy:
+    src: "{{ build_archive }}"
+    dest: "/tmp/reservations-{{ app_commit }}.tgz"
+    mode: "0644"
+
+- name: Dossier de l'application
+  ansible.builtin.file:
+    path: /opt/reservations
+    state: directory
+    mode: "0755"
+
+- name: Extraire l'application
+  ansible.builtin.unarchive:
+    src: "/tmp/reservations-{{ app_commit }}.tgz"
+    dest: /opt/reservations
+    remote_src: true
+  notify: Redemarrer reservations
 
 # 4. Écrire la configuration (deploy.sh : printf … > /etc/reservations/reservations.env)
 #    Le gabarit templates/reservations.env.j2 vers /etc/reservations/reservations.env (ansible.builtin.template).
+- name: Dossier de configuration
+  ansible.builtin.file:
+    path: /etc/reservations
+    state: directory
+    mode: "0755"
+
+- name: FIchier de configuration
+  ansible.builtin.template:
+    src: reservations.env.j2
+    dest: /etc/reservations/reservations.env
+    owner: root
+    group: reservations
+    mode: "0640"
+  notify: Redemarrer reservations
 
 # 5. Redémarrer (deploy.sh : sudo service reservations restart)
 #    Seulement si quelque chose a changé : notify vers le handler, puis ansible.builtin.meta: flush_handlers.
 #    Et le service démarré dans tous les cas (ansible.builtin.service, state: started).
+- name: Appliquer les redemarrages en attente
+  ansible.builtin.meta: flush_handlers
+
+- name: Le service est demarré
+  ansible.builtin.service:
+    name: reservations
+    state: started
 
 # 6. Vérifier (deploy.sh : curl --retry …/health)
 #    ansible.builtin.uri sur http://localhost:8080/ready, avec retries et until.
+
+- name: Attendre que l'application est present
+  ansible.builtin.uri:
+    url: http://localhost:8080/ready
+    status_code: 200
+  register: ready
+  until: ready.status == 200
+  retries: 20
+  delay: 2

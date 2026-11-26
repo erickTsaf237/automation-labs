@@ -1,2 +1,6 @@
 # Squelette fourni (lab ansible) : les handlers du rôle. Un handler ne tourne que si une tâche l'a notifié.
 # Écrivez ici le handler « Redémarrer reservations » (ansible.builtin.service, state: restarted).
+- name: Redemarrer reservations
+  ansible.builtin.service:
+    name: reservations
+    state: restarted
