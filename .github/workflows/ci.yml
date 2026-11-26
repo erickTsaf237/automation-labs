@@ -86,7 +86,7 @@ jobs:
               with:
                   context: app
                   push: true
-                  tags: ${{ steps.nom.outputs.image }}:${{ github.sha }}
+                  tags: ${{ steps.nom.outputs.tags }}
                   build-args: |
                       APP_COMMIT=${{github.sha}}
                       APP_VERSION=${{steps.nom.outputs.version}}
