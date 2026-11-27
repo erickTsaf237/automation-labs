@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: reservations
+  namespace: reservations
+  labels:
+    app.kubernetes.io/name: reservations
+    app.kubernetes.io/part-of: valmorin
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  ingressClassName: traefik
+  rules:
+    - http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: reservations
+                port:
+                  number: 80

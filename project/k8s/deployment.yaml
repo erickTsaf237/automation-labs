@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservations
+  namespace: reservations
+  labels:
+    app.kubernetes.io/name: reservations
+    app.kubernetes.io/part-of: valmorin
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: reservations
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: reservations
+        app.kubernetes.io/part-of: valmorin
+        app.kubernetes.io/version: "1.0.0"
+    spec:
+      containers:
+        - name: reservations
+          image: reservations:1.0.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: db.data
+            - name: DB_PASSWORD
+              value: lab-cluster-password

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: reservations
+  namespace: reservations
+  labels:
+    app.kubernetes.io/name: reservations
+    app.kubernetes.io/part-of: valmorin
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: reservations
+  ports:
+    - port: 80
+      targetPort: 8080
