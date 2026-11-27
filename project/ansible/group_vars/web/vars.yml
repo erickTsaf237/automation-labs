@@ -1,1 +1,1 @@
-db_password: "lab-db-password"
+db_password: "{{ vault_db_password }}"
